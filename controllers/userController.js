@@ -1,23 +1,99 @@
-const userModel = require('../models/userSchema')
+const userModel = require('../models/userSchema');
 
-//create new user
-module.exports.createUser = async (req, res) => {
+/* Create Users by role Tenant, Owner, Vendor, Admin */
+
+// Create Admin
+module.exports.createAdmin = async (req, res) => {
     try {
-        const { name, email, password, phone, role } = req.body;
-        const existingUser = await userModel.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "Email already registered " })
-        }
-        const newUser = new userModel({ name, email, password, phone, role });
-        await newUser.save();
-        res.status(201).json({ newUser, message: "User created successfully" });
+        const { name, email, password, phone, adminLevel } = req.body;
 
+        const existing = await userModel.findOne({ email });
+        if (existing) return res.status(400).json({ message: 'Email already registered' });
+
+        const newUser = new userModel({ name, email, phone, password, role: 'ADMIN', adminLevel });
+        await newUser.save();
+
+        res.status(201).json({ newUser, message: 'Admin created successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error });
     }
-    catch (error) {
-        res.status(500).json({ message: "Server Error", error });
+};
+// Create Owner
+module.exports.createOwner = async (req, res) => {
+    try {
+        const { name, email, password, phone, companyName, bankIBAN, totalProperties } = req.body;
+
+        const existing = await userModel.findOne({ email });
+        if (existing) return res.status(400).json({ message: 'Email already registered' });
+
+        const newUser = new userModel({
+            name,
+            email,
+            phone,
+            password,
+            role: 'OWNER',
+            companyName,
+            bankIBAN,
+            totalProperties,
+        });
+
+        await newUser.save();
+        res.status(201).json({ newUser, message: 'Owner created successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error });
     }
-}
-//get all users
+};
+// Create Tenant
+module.exports.createTenant = async (req, res) => {
+    try {
+        const { name, email, password, phone, birthDate, employment, monthlyIncome } = req.body;
+
+        const existing = await userModel.findOne({ email });
+        if (existing) return res.status(400).json({ message: 'Email already registered' });
+
+        const newUser = new userModel({
+            name,
+            email,
+            phone,
+            password,
+            role: 'TENANT',
+            birthDate,
+            employment,
+            monthlyIncome,
+        });
+        await newUser.save();
+        res.status(201).json({ newUser, message: 'Tenant created successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error });
+    }
+};
+// Create Vendor
+module.exports.createVendor = async (req, res) => {
+    try {
+        const { name, email, password, phone, vendorServiceType, vendorLicenceNumber, vendorAvailability } = req.body;
+
+        const existing = await userModel.findOne({ email });
+        if (existing) return res.status(400).json({ message: 'Email already registered' });
+
+        const newUser = new userModel({
+            name,
+            email,
+            phone,
+            password,
+            role: 'VENDOR',
+            vendorServiceType,
+            vendorLicenceNumber,
+            vendorAvailability
+        });
+
+        await newUser.save();
+        res.status(201).json({ newUser, message: 'Vendor created successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error });
+    }
+};
+
+//Get All Users
 module.exports.getAllUsers = async (req, res) => {
     try {
         const users = await userModel.find();
@@ -27,7 +103,7 @@ module.exports.getAllUsers = async (req, res) => {
         res.status(500).json({ message: "Server Error", error });
     }
 };
-//get user by id
+// Get User By id
 module.exports.getUserById = async (req, res) => {
     try {
         const user = await userModel.findById(req.params.id);
@@ -41,7 +117,21 @@ module.exports.getUserById = async (req, res) => {
 
     }
 };
-//update by user id 
+// Get User By role
+module.exports.getUsersByRole = async (req, res) => {
+    try {
+        const { role } = req.query;
+
+        if (!role)
+            return res.status(400).json({ message: 'Missing role information. Please choose a user role (e.g., TENANT, OWNER, ADMIN, or VENDOR)' });
+
+        const users = await userModel.find({ role });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error });
+    }
+};
+// Update User By id
 module.exports.updateUserById = async (req, res) => {
     try {
         const updated = await userModel.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
@@ -55,7 +145,7 @@ module.exports.updateUserById = async (req, res) => {
         res.status(500).json({ message: "Server Error", error });
     }
 }
-//delete user by id 
+// Delete User By id
 module.exports.deleteUserById = async (req, res) => {
     try {
         const deleted = await userModel.findByIdAndDelete(req.params.id);
@@ -72,13 +162,30 @@ module.exports.loginUser = async (req, res) => {
         const { email, password } = req.body;
         const user = await userModel.findOne({ email });
         if (!user) return res.status(400).json({ message: "Invalid email" });
+        // Check if banned
+        if (user.isBanned) {
+            return res.status(403).json({ message: 'Your account has been banned. Please contact support.' });
+        }
+
+        // Check if not yet approved
+        if (!user.isApproved) {
+            return res.status(403).json({ message: 'Your account is awaiting approval by the admin.' });
+        }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ message: "Invalid password" });
-        res.json({ message: "Login successful", user });
-
+        res.json({
+            message: 'Login successful',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
+        });
     }
     catch (error) {
         res.status(500).json({ message: "Server Error", error });
     }
-}
+};
+
 

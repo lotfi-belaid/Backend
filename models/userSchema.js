@@ -77,6 +77,10 @@ const userSchema = new mongoose.Schema({
     },
     vendorLicenceNumber: { type: String, trim: true },
     vendorAvailability: { type: Boolean, default: true },
+
+    // account control flags
+    isBanned: { type: Boolean, default: false },
+    isApproved: { type: Boolean, default: false },
 },
     { timestamps: true }
 );
