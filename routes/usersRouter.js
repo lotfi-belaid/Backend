@@ -25,15 +25,32 @@ router.delete('/:id', userController.deleteUserById)
 router.get('/search', userController.search)
 
 //admin endpoints
-router.post('/admin/ban/:id',roleController.banUser)
-router.post('/admin/approve/:id',roleController.approveUser)
-router.get('/admin/dashboard',roleController.viewDashboard)
+router.post('/admin/ban/:id', roleController.banUser)
+router.post('/admin/approve/:id', roleController.approveUser)
+router.get('/admin/dashboard', roleController.viewDashboard)
 
 //owner endpoints
-router.post('/owner/property',roleController.addProperty)
-router.put('/owner/property',roleController.updateProperty)
-router.delete('/owner/property',roleController.deleteProperty)
-router.post
+router.post('/owner/property', roleController.addProperty)
+router.put('/owner/property', roleController.updateProperty)
+router.post('/owner/unit', roleController.addUnit)
+router.put('/owner/unit/:UnitId', roleController.updateUnitById)
+router.get('/owner/payments', roleController.viewPayments)
+router.post('/owner/assign-vendor', roleController.assignVendor)
+router.post('/owner/approve-application', roleController.approveApplication);
+router.post('/owner/review-termination', roleController.reviewLeaseTermination);
+
+//tenant endpoints
+router.post('/tenant/apply', roleController.applyForUnit)
+router.post('/tenant/request-termination', roleController.requestLeaseTermination)
+router.post('/tenant/signLease', roleController.signLease)
+router.post('/tenant/pay-Invoice', roleController.payInvoice)
+//vendor endpoints
+router.post('/vendor/accept-job',roleController.acceptJob)
+router.post('/vendor/add-report',roleController.addRepairReport)
+
+
+router.delete('/owner/property', roleController.deleteProperty)
+
 
 
 
