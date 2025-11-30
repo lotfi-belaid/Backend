@@ -12,7 +12,8 @@ const Maintenance = require('../models/maintenanceSchema');
 //ban user
 module.exports.banUser = async (req, res) => {
     try {
-        const user = await userModel.findById(req.params.userId);
+        const { id } = req.params
+        const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         user.isBanned = true;
@@ -26,7 +27,8 @@ module.exports.banUser = async (req, res) => {
 // Approve user
 module.exports.approveUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId);
+        const { id } = req.params
+        const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         user.isApproved = true;
@@ -197,13 +199,12 @@ module.exports.deleteProperty = async (req, res) => {
         const { ownerId, propertyId } = req.body;
 
         const owner = await User.findById(ownerId);
+        if (!owner || owner.role !== 'OWNER')
+            return res.status(403).json({ message: 'Only owners can delete properties' });
         if (owner.isBanned)
             return res.status(403).json({ message: 'Your account is banned' });
         if (!owner.isApproved)
             return res.status(403).json({ message: 'Your account is not approved yet' });
-        if (!owner || owner.role !== 'OWNER')
-            return res.status(403).json({ message: 'Only owners can delete properties' });
-
         const property = await Property.findById(propertyId);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
@@ -219,20 +220,19 @@ module.exports.deleteProperty = async (req, res) => {
 //add unit to property
 module.exports.addUnit = async (req, res) => {
     try {
-        const { ownerId, propertyId, unitNumber } = req.body;
+        const { ownerId, propertyId, unitNumber, bedrooms, areaM2, rentAmount, depositAmount } = req.body;
         const owner = await User.findById(ownerId);
+        if (!owner || owner.role !== 'OWNER')
+            return res.status(403).json({ message: 'Only owners can add units' });
         if (owner.isBanned)
             return res.status(403).json({ message: 'Your account is banned' });
         if (!owner.isApproved)
             return res.status(403).json({ message: 'Your account is not approved yet' });
-        if (!owner || owner.role !== 'OWNER')
-            return res.status(403).json({ message: 'Only owners can delete properties' });
-
         const property = await Property.findById(propertyId);
         if (!property) return res.status(404).json({ message: 'Property not found' });
 
         if (String(property.ownerId) !== String(ownerId))
-            return res.status(403).json({ message: 'You can only delete your own properties' });
+            return res.status(403).json({ message: 'You can only add units to your own properties' });
         const unit = new Unit({
             propertyId,
             unitNumber,
@@ -313,7 +313,7 @@ module.exports.reviewLeaseTermination = async (req, res) => {
         if (String(lease.ownerId) !== String(ownerId))
             return res.status(403).json({ message: 'You can only review terminations for your own leases' });
 
-        if (lease.termination.status !== 'REQUESTED')
+        if (!lease.termination || lease.termination.status !== 'REQUESTED')
             return res.status(400).json({ message: 'No pending termination request for this lease' });
 
 
@@ -427,7 +427,7 @@ module.exports.requestLeaseTermination = async (req, res) => {
         if (lease.status !== 'ACTIVE')
             return res.status(400).json({ message: 'Only ACTIVE leases can be requested to terminate' });
 
-        if (lease.termination.status === 'REQUESTED')
+        if (lease.termination && lease.termination.status === 'REQUESTED')
             return res.status(400).json({ message: 'You already have a pending termination request' });
 
         lease.termination = {
@@ -436,7 +436,6 @@ module.exports.requestLeaseTermination = async (req, res) => {
             requestedBy: tenantId,
             requestedAt: new Date()
         };
-
         await lease.save();
         res.json({ message: 'Termination requested. Owner will review.', lease });
     } catch (error) {
