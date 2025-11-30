@@ -303,7 +303,7 @@ module.exports.approveApplication = async (req, res) => {
     }
 };
 //approve or terminate lease termination request
-module.exports.reviewLeaseTermin = async (req, res) => {
+module.exports.reviewLeaseTermination = async (req, res) => {
     try {
         const { ownerId, leaseId, decision } = req.body;
 
