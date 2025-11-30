@@ -19,80 +19,111 @@ module.exports.createAdmin = async (req, res) => {
     }
 };
 // Create Owner
-module.exports.createOwner = async (req, res) => {
+module.exports.createOwnerWithImg = async (req, res) => {
     try {
-        const { name, email, password, phone, companyName, bankIBAN, totalProperties } = req.body;
-
-        const existing = await userModel.findOne({ email });
-        if (existing) return res.status(400).json({ message: 'Email already registered' });
-
-        const newUser = new userModel({
+        const {
             name,
             email,
-            phone,
             password,
+            phone,
+            companyName,
+            bankIBAN,
+            totalProperties,
+        } = req.body;
+
+        const userData = {
+            name,
+            email,
+            password,
+            phone,
             role: 'OWNER',
             companyName,
             bankIBAN,
             totalProperties,
-        });
+        };
 
+        if (req.file) {
+            userData.image_User = req.file.filename;
+        }
+
+        const newUser = new userModel(userData);
         await newUser.save();
         res.status(201).json({ newUser, message: 'Owner created successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
+        res.status(500).json({ message: 'Server error', error });
     }
 };
 // Create Tenant
-module.exports.createTenant = async (req, res) => {
+module.exports.createTenantWithImg = async (req, res) => {
     try {
-        const { name, email, password, phone, birthDate, employment, monthlyIncome } = req.body;
-
-        const existing = await userModel.findOne({ email });
-        if (existing) return res.status(400).json({ message: 'Email already registered' });
-
-        const newUser = new userModel({
+        const {
             name,
             email,
-            phone,
             password,
+            phone,
+            birthDate,
+            employment,
+            monthlyIncome,
+        } = req.body;
+
+        const userData = {
+            name,
+            email,
+            password,
+            phone,
             role: 'TENANT',
             birthDate,
             employment,
             monthlyIncome,
-        });
+        };
+
+        if (req.file) {
+            userData.image_User = req.file.filename;
+        }
+
+        const newUser = new userModel(userData);
         await newUser.save();
         res.status(201).json({ newUser, message: 'Tenant created successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
+        res.status(500).json({ message: 'Server error', error });
     }
 };
+
 // Create Vendor
-module.exports.createVendor = async (req, res) => {
+module.exports.createVendorWithImg = async (req, res) => {
     try {
-        const { name, email, password, phone, vendorServiceType, vendorLicenceNumber, vendorAvailability } = req.body;
-
-        const existing = await userModel.findOne({ email });
-        if (existing) return res.status(400).json({ message: 'Email already registered' });
-
-        const newUser = new userModel({
+        const {
             name,
             email,
-            phone,
             password,
+            phone,
+            vendorServiceType,
+            vendorLicenceNumber,
+            vendorAvailability,
+        } = req.body;
+
+        const userData = {
+            name,
+            email,
+            password,
+            phone,
             role: 'VENDOR',
             vendorServiceType,
             vendorLicenceNumber,
-            vendorAvailability
-        });
+            vendorAvailability,
+        };
 
+        if (req.file) {
+            userData.image_User = req.file.filename;
+        }
+
+        const newUser = new userModel(userData);
         await newUser.save();
         res.status(201).json({ newUser, message: 'Vendor created successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
+        res.status(500).json({ message: 'Server error', error });
     }
 };
-
 //Get All Users
 module.exports.getAllUsers = async (req, res) => {
     try {
@@ -134,11 +165,13 @@ module.exports.getUsersByRole = async (req, res) => {
 // Update User By id
 module.exports.updateUserById = async (req, res) => {
     try {
-        const updated = await userModel.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-        if (!updated) {
+        const { id } = req.params;
+        const { name, email, phone } = req.body;
+        const users = await userModel.findByIdAndUpdate(id, { name, email, phone }, { new: true, runValidators: true });
+        if (!users) {
             return res.status(404).json({ message: "User not found" });
         }
-        res.json({ message: "User updated successfully", updated });
+        res.json({ message: "User updated successfully", users });
 
     }
     catch (error) {
@@ -148,7 +181,8 @@ module.exports.updateUserById = async (req, res) => {
 // Delete User By id
 module.exports.deleteUserById = async (req, res) => {
     try {
-        const deleted = await userModel.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
+        const deleted = await userModel.findByIdAndDelete(id);
         if (!deleted) return res.status(404).json({ message: "User not found" });
         res.json({ message: "User deleted successfully", deleted });
     }
@@ -156,7 +190,7 @@ module.exports.deleteUserById = async (req, res) => {
         res.status(500).json({ message: "Server Error", error });
     }
 }
-//login user 
+//login User
 module.exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -182,6 +216,17 @@ module.exports.loginUser = async (req, res) => {
                 role: user.role,
             },
         });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Server Error", error });
+    }
+};
+//search Users by name
+module.exports.search = async (req, res) => {
+    try {
+        const { name } = req.body;
+        const users = await userModel.find({ name: { $regex: name, $options: 'i' } });
+        res.status(200).json(users);
     }
     catch (error) {
         res.status(500).json({ message: "Server Error", error });

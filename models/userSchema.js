@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true, trim: true, lowercase: true, match: [/\S+@\S+\.\S+/, 'please fill a valid email address'] },
 
     phone: { type: String, required: true },
+    image_user: { type: String, default: "client.png" },
 
     password: {
         type: String, required: true, minlength: 8, match: [/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
