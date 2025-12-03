@@ -1,4 +1,5 @@
 const userModel = require('../models/userSchema');
+const Unit = require('../models/unitSchema');
 
 /* Create Users by role Tenant, Owner, Vendor, Admin */
 
@@ -6,6 +7,8 @@ const userModel = require('../models/userSchema');
 module.exports.createAdmin = async (req, res) => {
     try {
         const { name, email, password, phone, adminLevel } = req.body;
+        if (!passwordPolicy.test(password))
+            return res.status(400).json({ message: 'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character' });
 
         const existing = await userModel.findOne({ email });
         if (existing) return res.status(400).json({ message: 'Email already registered' });
@@ -30,6 +33,8 @@ module.exports.createOwnerWithImg = async (req, res) => {
             bankIBAN,
             totalProperties,
         } = req.body;
+        if (!passwordPolicy.test(password))
+            return res.status(400).json({ message: 'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character' });
 
         const userData = {
             name,
@@ -37,9 +42,9 @@ module.exports.createOwnerWithImg = async (req, res) => {
             password,
             phone,
             role: 'OWNER',
-            companyName,
-            bankIBAN,
-            totalProperties,
+            ownerCompanyName: companyName,
+            ownerBankIBAN: bankIBAN,
+            ownerTotalProperties: Number(totalProperties ?? 0),
         };
 
         if (req.file) {
@@ -65,6 +70,8 @@ module.exports.createTenantWithImg = async (req, res) => {
             employment,
             monthlyIncome,
         } = req.body;
+        if (!passwordPolicy.test(password))
+            return res.status(400).json({ message: 'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character' });
 
         const userData = {
             name,
@@ -72,9 +79,9 @@ module.exports.createTenantWithImg = async (req, res) => {
             password,
             phone,
             role: 'TENANT',
-            birthDate,
-            employment,
-            monthlyIncome,
+            tenantBirthDate: birthDate,
+            tenantEmployment: employment,
+            tenantMonthlyIncome: monthlyIncome,
         };
 
         if (req.file) {
@@ -101,6 +108,8 @@ module.exports.createVendorWithImg = async (req, res) => {
             vendorLicenceNumber,
             vendorAvailability,
         } = req.body;
+        if (!passwordPolicy.test(password))
+            return res.status(400).json({ message: 'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character' });
 
         const userData = {
             name,
@@ -110,7 +119,7 @@ module.exports.createVendorWithImg = async (req, res) => {
             role: 'VENDOR',
             vendorServiceType,
             vendorLicenceNumber,
-            vendorAvailability,
+            vendorAvailability: vendorAvailability ?? true,
         };
 
         if (req.file) {
@@ -137,7 +146,8 @@ module.exports.getAllUsers = async (req, res) => {
 // Get User By id
 module.exports.getUserById = async (req, res) => {
     try {
-        const user = await userModel.findById(req.params.id);
+        const {id}=req.params;
+        const user = await userModel.findById(id);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -151,7 +161,7 @@ module.exports.getUserById = async (req, res) => {
 // Get User By role
 module.exports.getUsersByRole = async (req, res) => {
     try {
-        const { role } = req.query;
+        const { role } = req.params;
 
         if (!role)
             return res.status(400).json({ message: 'Missing role information. Please choose a user role (e.g., TENANT, OWNER, ADMIN, or VENDOR)' });
@@ -230,6 +240,17 @@ module.exports.search = async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ message: "Server Error", error });
+    }
+};
+module.exports.searchByRentAmount = async (req, res) => {
+    try {
+        const { sort } = req.query;
+        const sortedList = sort === 'Highest Price' ? -1 : 1;
+        const units = await Unit.find().sort({ rentAmount: sortedList });
+        res.status(200).json(units);
+    }
+    catch (error) {
+        return res.status(500).json({ message: "Server Error", error })
     }
 };
 

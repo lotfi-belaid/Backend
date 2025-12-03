@@ -8,3 +8,4 @@ const propertySchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     description: { type: String }
 });
+module.exports = mongoose.model('Property', propertySchema);

@@ -28,11 +28,8 @@ module.exports.banUser = async (req, res) => {
 module.exports.approveUser = async (req, res) => {
     try {
         const { id } = req.params
-        const user = await User.findById(id);
+        const user = await User.findByIdAndUpdate(id, { isApproved: true }, { new: true, runValidators: false });
         if (!user) return res.status(404).json({ message: 'User not found' });
-
-        user.isApproved = true;
-        await user.save();
 
         res.json({ message: `User ${user.name} approved successfully`, user });
     } catch (error) {
@@ -217,6 +214,24 @@ module.exports.deleteProperty = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error });
     }
 };
+//get all the properties for the owner 
+module.exports.getAllPropertyByOwner = async (req, res) => {
+    try {
+        const { ownerId } = req.params;
+        const owner = await User.findById(ownerId);
+        if (!owner || owner.role !== 'OWNER')
+            return res.status(403).json({ message: "only owners can see own Properties" });
+        if (owner.isBanned)
+            return res.status(403).json({ message: "your account is banned " });
+        if (!owner.isApproved)
+            return res.status(403).json({ message: "your account is not approved yet" });
+        const properties = await Property.find({ ownerId });
+        return res.status(200).json(properties);
+    }
+    catch (error) {
+        return res.status(500).json({ message: "Server Error", error });
+    }
+};
 //add unit to property
 module.exports.addUnit = async (req, res) => {
     try {
@@ -252,48 +267,49 @@ module.exports.addUnit = async (req, res) => {
     }
 };
 //update Unit
-module.exports.updateUnitById = async(req,res) => {
-    try{
-        const{unitId}=req.params
-    const{
-        ownerId,
-        propertyId,
-        unitNumber,
-        bedrooms,
-        bathrooms,
-        areaM2,
-        rentAmount,
-        depositAmount,
-        status
-    }=req.body
-    const owner=await User.findById(ownerId)
-    if(!owner || owner.role !=='OWNER')
-        return res.status(403).json({message :'only owner can update the units'})
-    if(owner.isBanned)
-        return res.status(403).json({message:'your account is banned'})
-    if(!owner.isApproved)
-        return res.status(403).json({message:'your account is not approved yet'})
-    const property=await Property.findById(propertyId)
-    if(!property)
-        return res.status(404).json({message:'Property not found'})
-    const unit=await Unit.findById(unitId)
-    if(!unit)
-        return res.status(404).json({message:'Unit not found'})
-    if(String(property.ownerId) !== String(ownerId))
-        return res.status(403).json({message:'you can only update your own Properties'})
-    if(String(unit.propertyId) !== String(propertyId))
-        return res.status(403).json({message:'you can only update units belonging to this property',property})
-    if(unitNumber !==undefined ) unit.unitNumber=unitNumber;
-    if(bedrooms !==undefined) unit.bedrooms=bedrooms;
-    if(bathrooms !==undefined) unit.bathrooms=bathrooms;
-    if(areaM2 !==undefined) unit.areaM2=areaM2;
-    if(rentAmount !==undefined) unit.rentAmount=rentAmount;
-    if(depositAmount !==undefined) unit.depositAmount=depositAmount;
-    if(status !==undefined) unit.status=status;
-    await unit.save();
-    res.json({message:'unit updated successfully',unit});}
-    catch(error){
-        return res.status(500).json({message:'Server Error',error});
+module.exports.updateUnitById = async (req, res) => {
+    try {
+        const { unitId } = req.params
+        const {
+            ownerId,
+            propertyId,
+            unitNumber,
+            bedrooms,
+            bathrooms,
+            areaM2,
+            rentAmount,
+            depositAmount,
+            status
+        } = req.body
+        const owner = await User.findById(ownerId)
+        if (!owner || owner.role !== 'OWNER')
+            return res.status(403).json({ message: 'only owner can update the units' })
+        if (owner.isBanned)
+            return res.status(403).json({ message: 'your account is banned' })
+        if (!owner.isApproved)
+            return res.status(403).json({ message: 'your account is not approved yet' })
+        const property = await Property.findById(propertyId)
+        if (!property)
+            return res.status(404).json({ message: 'Property not found' })
+        const unit = await Unit.findById(unitId)
+        if (!unit)
+            return res.status(404).json({ message: 'Unit not found' })
+        if (String(property.ownerId) !== String(ownerId))
+            return res.status(403).json({ message: 'you can only update your own Properties' })
+        if (String(unit.propertyId) !== String(propertyId))
+            return res.status(403).json({ message: 'you can only update units belonging to this property', property })
+        if (unitNumber !== undefined) unit.unitNumber = unitNumber;
+        if (bedrooms !== undefined) unit.bedrooms = bedrooms;
+        if (bathrooms !== undefined) unit.bathrooms = bathrooms;
+        if (areaM2 !== undefined) unit.areaM2 = areaM2;
+        if (rentAmount !== undefined) unit.rentAmount = rentAmount;
+        if (depositAmount !== undefined) unit.depositAmount = depositAmount;
+        if (status !== undefined) unit.status = status;
+        await unit.save();
+        res.json({ message: 'unit updated successfully', unit });
+    }
+    catch (error) {
+        return res.status(500).json({ message: 'Server Error', error });
     }
 };
 // Approve tenant application (and then creates lease automatically)

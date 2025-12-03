@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const passwordPolicy=/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 const userSchema = new mongoose.Schema({
 
     name: { type: String, required: true, trim: true },
@@ -10,8 +11,7 @@ const userSchema = new mongoose.Schema({
     image_user: { type: String, default: "client.png" },
 
     password: {
-        type: String, required: true, minlength: 8, match: [/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-            'Password must contain at least 8 characters, including uppercase, lowercase, number, and special character']
+        type: String, required: true, minlength: 8, 
     },
 
     role: { type: String, enum: ["ADMIN", "OWNER", "TENANT", "VENDOR"], default: "TENANT" },
@@ -46,11 +46,14 @@ const userSchema = new mongoose.Schema({
     },
     ownerTotalProperties: {
         type: Number,
-        default: 0,
+
         min: 0,
         validate: {
             validator: Number.isInteger,
             message: 'Total properties must be an Number',
+        },
+        required: function () {
+            return this.role === 'OWNER';
         },
     },
     //tenant attributes
@@ -77,7 +80,12 @@ const userSchema = new mongoose.Schema({
         trim: true,
     },
     vendorLicenceNumber: { type: String, trim: true },
-    vendorAvailability: { type: Boolean, default: true },
+    vendorAvailability: {
+        type: Boolean,
+        required: function () {
+            return this.role === 'VENDOR';
+        },
+    },
 
     // account control flags
     isBanned: { type: Boolean, default: false },

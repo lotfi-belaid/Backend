@@ -16,13 +16,14 @@ router.post('/vendor', userController.createVendorWithImg)
 router.post('/login', userController.loginUser)
 //get users
 router.get('/', userController.getAllUsers)
-router.get('/:id', userController.getUserById)
 router.get('/by-role/:role', userController.getUsersByRole)
 //update and delete
 router.put('/:id', userController.updateUserById)
 router.delete('/:id', userController.deleteUserById)
 //search by name
 router.get('/search', userController.search)
+router.get('/searchByRentAmount', userController.searchByRentAmount)
+router.get('/:id', userController.getUserById)
 
 //admin endpoints
 router.post('/admin/ban/:id', roleController.banUser)
@@ -31,6 +32,7 @@ router.get('/admin/dashboard', roleController.viewDashboard)
 
 //owner endpoints
 router.post('/owner/property', roleController.addProperty)
+router.get('/owner/properties/:ownerId', roleController.getAllPropertyByOwner)
 router.put('/owner/property', roleController.updateProperty)
 router.post('/owner/unit', roleController.addUnit)
 router.put('/owner/unit/:UnitId', roleController.updateUnitById)
@@ -45,17 +47,11 @@ router.post('/tenant/request-termination', roleController.requestLeaseTerminatio
 router.post('/tenant/signLease', roleController.signLease)
 router.post('/tenant/pay-Invoice', roleController.payInvoice)
 //vendor endpoints
-router.post('/vendor/accept-job',roleController.acceptJob)
-router.post('/vendor/add-report',roleController.addRepairReport)
+router.post('/vendor/accept-job', roleController.acceptJob)
+router.post('/vendor/add-report', roleController.addRepairReport)
 
 
 router.delete('/owner/property', roleController.deleteProperty)
-
-
-
-
-
-
 
 
 module.exports = router;  
