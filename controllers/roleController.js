@@ -312,6 +312,22 @@ module.exports.updateUnitById = async (req, res) => {
         return res.status(500).json({ message: 'Server Error', error });
     }
 };
+//get all units for specific property
+module.exports.getAllUnitByProperty = async (req, res) => {
+    try {
+        const { propertyId } = req.params;
+        const property = await Property.findById(propertyId);
+        if (!property)
+            return res.status(404).json({ message: "Property not found" });
+        const units = await Unit.find(propertyId);
+        if (!units) return res.status(404).json({ message: "Units not found" });
+        res.status(200).json(units);
+    }
+    catch(error){
+        return res.status(500).json({message:"Server Error"});
+    }
+
+};
 // Approve tenant application (and then creates lease automatically)
 module.exports.approveApplication = async (req, res) => {
     try {
