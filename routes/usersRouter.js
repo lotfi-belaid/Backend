@@ -36,7 +36,7 @@ router.get('/owner/properties/:ownerId', roleController.getAllPropertyByOwner)
 router.put('/owner/property', roleController.updateProperty)
 router.post('/owner/unit', roleController.addUnit)
 router.get('/units/:propertyId', roleController.getAllUnitByProperty)
-router.put('/owner/unit/:UnitId', roleController.updateUnitById)
+router.put('/owner/unit/:unitId', roleController.updateUnitById)
 router.get('/owner/payments', roleController.viewPayments)
 router.post('/owner/assign-vendor', roleController.assignVendor)
 router.post('/owner/approve-application', roleController.approveApplication);
@@ -51,7 +51,7 @@ router.post('/tenant/pay-Invoice', roleController.payInvoice)
 router.post('/vendor/accept-job', roleController.acceptJob)
 router.post('/vendor/add-report', roleController.addRepairReport)
 
-
+router.delete('/owner/unit/:unitId',roleController.deleteUnit)
 router.delete('/owner/property', roleController.deleteProperty)
 
 

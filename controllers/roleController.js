@@ -312,6 +312,31 @@ module.exports.updateUnitById = async (req, res) => {
         return res.status(500).json({ message: 'Server Error', error });
     }
 };
+//delete unit 
+module.exports.deleteUnit = async (req, res) => {
+    try {
+        const { unitId } = req.params;
+        const { ownerId, propertyId } = req.body;
+        const owner = await User.findById(ownerId);
+        if (!owner || owner.role !== "OWNER")
+            return res.status(403).json({ message: "only owner can delete units" });
+        if (owner.isBanned) return res.status(403).json({ message: "your account is banned" });
+        if (!owner.isApproved) return res.status(403).json({ message: "your account is not approved yet" });
+        const property = await Property.findById(propertyId);
+        if (!property) return res.status(404).json({ message: "property not found" });
+        if (String(property.ownerId) !== String(ownerId))
+            return res.status(403).json({ message: "you can only delete units in your own property" });
+        const unit = await Unit.findById(unitId);
+        if (!unit) return res.status(404).json({ message: "unit not found" });
+        if (String(unit.propertyId) !== String(propertyId))
+            return res.status(403).json({ message: "you can only delete units belongs to this property", property });
+        await unit.deleteOne();
+        res.json({ message: 'unit deleted successfully' });
+    }
+    catch (error) {
+        return res.status(500).json({ message: "Server Error" });
+    }
+};
 //get all units for specific property
 module.exports.getAllUnitByProperty = async (req, res) => {
     try {
@@ -323,8 +348,8 @@ module.exports.getAllUnitByProperty = async (req, res) => {
         if (!units) return res.status(404).json({ message: "Units not found" });
         res.status(200).json(units);
     }
-    catch(error){
-        return res.status(500).json({message:"Server Error"});
+    catch (error) {
+        return res.status(500).json({ message: "Server Error" });
     }
 
 };
