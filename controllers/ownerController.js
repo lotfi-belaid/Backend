@@ -5,70 +5,6 @@ const Unit = require('../models/unitSchema');
 const Lease = require('../models/leaseSchema');
 const Invoice = require('../models/invoiceSchema');
 const Maintenance = require('../models/maintenanceSchema');
-
-
-/*Admin Functions*/
-
-//ban user
-module.exports.banUser = async (req, res) => {
-    try {
-        const { id } = req.params
-        const user = await User.findById(id);
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        user.isBanned = true;
-        await user.save();
-
-        res.json({ message: `User ${user.name} banned successfully`, user });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-};
-// Approve user
-module.exports.approveUser = async (req, res) => {
-    try {
-        const { id } = req.params
-        const user = await User.findByIdAndUpdate(id, { isApproved: true }, { new: true, runValidators: false });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        res.json({ message: `User ${user.name} approved successfully`, user });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-};
-// view Dashboard Stats
-module.exports.viewDashboard = async (req, res) => {
-    try {
-        const totalUsers = await User.countDocuments();
-        const admins = await User.countDocuments({ role: 'ADMIN' });
-        const owners = await User.countDocuments({ role: 'OWNER' });
-        const tenants = await User.countDocuments({ role: 'TENANT' });
-        const vendors = await User.countDocuments({ role: 'VENDOR' });
-
-        const totalProperties = await Property.countDocuments();
-        const totalLeases = await Lease.countDocuments({ status: 'ACTIVE' });
-        const totalMaintenance = await Maintenance.countDocuments();
-        const pendingApprovals = await User.countDocuments({ isApproved: false });
-
-        const invoicesPaid = await Invoice.countDocuments({ status: 'PAID' });
-        const invoicesPending = await Invoice.countDocuments({ status: 'PENDING' });
-
-        res.json({
-            message: 'Dashboard summary fetched successfully',
-            data: {
-                users: { totalUsers, admins, owners, tenants, vendors },
-                properties: totalProperties,
-                leases: totalLeases,
-                maintenance: totalMaintenance,
-                pendingApprovals,
-                invoices: { paid: invoicesPaid, pending: invoicesPending },
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching dashboard data', error });
-    }
-};
-/*Owner Functions*/
 //add property
 module.exports.addProperty = async (req, res) => {
     try {
@@ -91,62 +27,6 @@ module.exports.addProperty = async (req, res) => {
         await owner.save();
 
         res.status(201).json({ message: 'Property created successfully', property });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-};
-// assign vendor to maintenance task
-module.exports.assignVendor = async (req, res) => {
-    try {
-        const { vendorId, maintenanceId } = req.body;
-        const vendor = await User.findById(vendorId);
-        const maintenance = await Maintenance.findById(maintenanceId);
-
-        if (!vendor || vendor.role !== 'VENDOR')
-            return res.status(400).json({ message: 'Invalid vendor ID' });
-
-        if (vendor.isBanned)
-            return res.status(403).json({ message: 'Vendor account is banned' });
-        if (!vendor.isApproved)
-            return res.status(403).json({ message: 'Vendor account not yet approved' });
-
-        if (!maintenance)
-            return res.status(404).json({ message: 'Maintenance not found' });
-        // Assign vendor
-        maintenance.vendorId = vendorId;
-        await maintenance.save();
-
-        res.json({ message: `Vendor ${vendor.name} assigned successfully`, maintenance });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-};
-//view Payments
-module.exports.viewPayments = async (req, res) => {
-    try {
-        // Fetch all invoices and populate tenant details
-        const invoices = await Invoice.find()
-            .populate('tenantId', 'name email') // shows tenant name and email
-            .sort({ dueDate: -1 }); // sort by most recent first
-
-        // If there are no invoices
-        if (invoices.length === 0) {
-            return res.status(404).json({ message: 'No payments found.' });
-        }
-
-        // Format the response
-        res.status(200).json({
-            message: 'Payments fetched successfully.',
-            payments: invoices.map(inv => ({
-                id: inv._id,
-                tenant: inv.tenantId ? inv.tenantId.name : 'Unknown Tenant',
-                email: inv.tenantId ? inv.tenantId.email : 'No email',
-                amount: inv.amount,
-                status: inv.status,
-                dueDate: inv.dueDate,
-                paidDate: inv.paidDate || null,
-            })),
-        });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error });
     }
@@ -217,6 +97,7 @@ module.exports.deleteProperty = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error });
     }
 };
+
 //get all the properties for the owner 
 module.exports.getAllPropertyByOwner = async (req, res) => {
     try {
@@ -236,13 +117,13 @@ module.exports.getAllPropertyByOwner = async (req, res) => {
     }
 };
 //get all Property
-module.exports.getAllPorperties=async(req,res)=>{
-    try{
-        const properties=await Property.find();
+module.exports.getAllPorperties = async (req, res) => {
+    try {
+        const properties = await Property.find();
         res.json(properties);
     }
-    catch{
-        return res.status(500).json({message:"Server Error"});
+    catch {
+        return res.status(500).json({ message: "Server Error" });
     }
 };
 //add unit to property
@@ -376,6 +257,18 @@ module.exports.getAllUnits = async (req, res) => {
         return res.status(500).json({ message: "Server Error" });
     }
 };
+//search units by rent amount
+module.exports.searchByRentAmount = async (req, res) => {
+    try {
+        const { sort } = req.query;
+        const sortedList = sort === 'Highest Price' ? -1 : 1;
+        const units = await Unit.find().sort({ rentAmount: sortedList });
+        res.status(200).json(units);
+    }
+    catch (error) {
+        return res.status(500).json({ message: "Server Error", error })
+    }
+};
 // Approve tenant application (and then creates lease automatically)
 module.exports.approveApplication = async (req, res) => {
     try {
@@ -465,158 +358,60 @@ module.exports.reviewLeaseTermination = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error });
     }
 };
-/* Tenant Functions */
-//apply for Unit
-module.exports.applyForUnit = async (req, res) => {
-    try {
-        const { tenantId, unitId } = req.body;
-        const tenant = await User.findById(tenantId);
-        const unit = await Unit.findById(unitId);
-
-        if (!tenant || tenant.role !== 'TENANT')
-            return res.status(403).json({ message: 'Only tenants can apply for units' });
-
-        if (tenant.isBanned)
-            return res.status(403).json({ message: 'Your account is banned' });
-        if (!tenant.isApproved)
-            return res.status(403).json({ message: 'Your account is not approved yet' });
-
-        if (!unit || unit.status !== 'AVAILABLE')
-            return res.status(400).json({ message: 'Unit not available' });
-
-        res.status(201).json({ message: `Tenant ${tenant.name} applied for unit #${unitId}` });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-};
-//sign Lease
-module.exports.signLease = async (req, res) => {
-    try {
-        const { tenantId, leaseId } = req.body;
-        const tenant = await User.findById(tenantId);
-        const lease = await Lease.findById(leaseId);
-
-        if (!tenant || tenant.role !== 'TENANT')
-            return res.status(403).json({ message: 'Only tenants can sign leases' });
-        if (tenant.isBanned)
-            return res.status(403).json({ message: 'Your account is banned' });
-        if (!tenant.isApproved)
-            return res.status(403).json({ message: 'Your account is not approved yet' });
-        if (!lease)
-            return res.status(404).json({ message: 'Lease not found' });
-        lease.status = 'ACTIVE';
-        await lease.save();
-
-        res.json({ message: `Lease #${leaseId} signed successfully by ${tenant.name}`, lease });
-
-    }
-    catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-
-
-};
-//pay Invoice
-module.exports.payInvoice = async (req, res) => {
-    try {
-        const { tenantId, invoiceId } = req.body;
-        const tenant = await User.findById(tenantId);
-        const invoice = await Invoice.findById(invoiceId);
-        if (!tenant || tenant.role !== 'TENANT')
-            return res.status(403).json({ message: 'Only tenants can pay invoices' });
-        if (tenant.isBanned)
-            return res.status(403).json({ message: 'Your account is banned' });
-        if (!tenant.isApproved)
-            return res.status(403).json({ message: 'Your account is not approved yet' });
-        if (!invoice)
-            return res.status(404).json({ message: 'Invoice not found' });
-        invoice.status = 'PAID';
-        invoice.paidAt = new Date();
-        await invoice.save();
-        res.json({ message: `Invoice #${invoiceId} paid successfully by ${tenant.name}`, invoice });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error });
-    }
-};
-//request Lease Termination
-module.exports.requestLeaseTermination = async (req, res) => {
-    try {
-        const { tenantId, leaseId, reason } = req.body;
-
-        const lease = await Lease.findById(leaseId);
-        if (!lease) return res.status(404).json({ message: 'Lease not found' });
-
-        if (String(lease.tenantId) !== String(tenantId))
-            return res.status(403).json({ message: 'You can only request termination of your own lease' });
-
-        if (lease.status !== 'ACTIVE')
-            return res.status(400).json({ message: 'Only ACTIVE leases can be requested to terminate' });
-
-        if (lease.termination && lease.termination.status === 'REQUESTED')
-            return res.status(400).json({ message: 'You already have a pending termination request' });
-
-        lease.termination = {
-            status: 'REQUESTED',
-            reason: reason || '',
-            requestedBy: tenantId,
-            requestedAt: new Date()
-        };
-        await lease.save();
-        res.json({ message: 'Termination requested. Owner will review.', lease });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error', error: error });
-    }
-};
-/*Vendor Functions */
-
-//acceptJob
-module.exports.acceptJob = async (req, res) => {
+// assign vendor to maintenance task
+module.exports.assignVendor = async (req, res) => {
     try {
         const { vendorId, maintenanceId } = req.body;
         const vendor = await User.findById(vendorId);
         const maintenance = await Maintenance.findById(maintenanceId);
 
         if (!vendor || vendor.role !== 'VENDOR')
-            return res.status(403).json({ message: 'Only vendors can accept jobs' });
+            return res.status(400).json({ message: 'Invalid vendor ID' });
+
         if (vendor.isBanned)
-            return res.status(403).json({ message: 'Your account is banned' });
+            return res.status(403).json({ message: 'Vendor account is banned' });
         if (!vendor.isApproved)
-            return res.status(403).json({ message: 'Your account is not approved yet' });
+            return res.status(403).json({ message: 'Vendor account not yet approved' });
+
         if (!maintenance)
-            return res.status(404).json({ message: 'Maintenance job not found' });
-        maintenance.status = 'IN_PROGRESS';
+            return res.status(404).json({ message: 'Maintenance not found' });
+        // Assign vendor
+        maintenance.vendorId = vendorId;
         await maintenance.save();
 
-        res.json({ message: `Maintenance job #${maintenanceId} accepted successfully by ${vendor.name}`, maintenance });
+        res.json({ message: `Vendor ${vendor.name} assigned successfully`, maintenance });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error });
     }
 };
-//add Repair Report and Mark as Done
-module.exports.addRepairReport = async (req, res) => {
+//view Payments
+module.exports.viewPayments = async (req, res) => {
     try {
-        const { maintenanceId, description, cost } = req.body;
+        // Fetch all invoices and populate tenant details
+        const invoices = await Invoice.find()
+            .populate('tenantId', 'name email') // shows tenant name and email
+            .sort({ dueDate: -1 }); // sort by most recent first
 
-        const maintenance = await Maintenance.findById(maintenanceId);
-        if (!maintenance)
-            return res.status(404).json({ message: 'Maintenance not found' });
+        // If there are no invoices
+        if (invoices.length === 0) {
+            return res.status(404).json({ message: 'No payments found.' });
+        }
 
-        maintenance.report = {
-            description,
-            cost,
-            submittedAt: new Date()
-        };
-        maintenance.status = 'DONE';
-        await maintenance.save();
-
-        res.json({
-            message: 'Repair report submitted successfully',
-            maintenance
+        // Format the response
+        res.status(200).json({
+            message: 'Payments fetched successfully.',
+            payments: invoices.map(inv => ({
+                id: inv._id,
+                tenant: inv.tenantId ? inv.tenantId.name : 'Unknown Tenant',
+                email: inv.tenantId ? inv.tenantId.email : 'No email',
+                amount: inv.amount,
+                status: inv.status,
+                dueDate: inv.dueDate,
+                paidDate: inv.paidDate || null,
+            })),
         });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error });
     }
 };
-
-
 

@@ -242,16 +242,4 @@ module.exports.search = async (req, res) => {
         res.status(500).json({ message: "Server Error", error });
     }
 };
-module.exports.searchByRentAmount = async (req, res) => {
-    try {
-        const { sort } = req.query;
-        const sortedList = sort === 'Highest Price' ? -1 : 1;
-        const units = await Unit.find().sort({ rentAmount: sortedList });
-        res.status(200).json(units);
-    }
-    catch (error) {
-        return res.status(500).json({ message: "Server Error", error })
-    }
-};
-
 

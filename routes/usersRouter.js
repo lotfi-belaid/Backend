@@ -1,61 +1,96 @@
-var express = require('express');
-var router = express.Router();
-const userController = require('../controllers/userController')
-const roleController = require('../controllers/roleController')
+// routes/usersRouter.js
+const express = require('express');
+const router = express.Router();
+
+const adminController = require('../controllers/adminController');
+const ownerController = require('../controllers/ownerController');
+const tenantController = require('../controllers/tenantController');
+const vendorController = require('../controllers/vendorController');
+const userController = require('../controllers/userController');
 const uploadfile = require('../middlewares/uploadfile');
 
-router.post('/owners', uploadfile.single('image_User'), userController.createOwnerWithImg);
-router.post('/tenants', uploadfile.single('image_User'), userController.createTenantWithImg);
-router.post('/vendors', uploadfile.single('image_User'), userController.createVendorWithImg);
-//create user
-router.post('/admin', userController.createAdmin)
-router.post('/owner', userController.createOwnerWithImg)
-router.post('/tenant', userController.createTenantWithImg)
-router.post('/vendor', userController.createVendorWithImg)
-//login user
-router.post('/login', userController.loginUser)
-//get users
-router.get('/', userController.getAllUsers)
-router.get('/by-role/:role', userController.getUsersByRole)
-//update and delete
-router.get('/units', roleController.getAllUnits)
-router.get('/properties', roleController.getAllPorperties)
+/* ---------- AUTH / USER CREATION ---------- */
 
-router.put('/:id', userController.updateUserById)
-router.delete('/:id', userController.deleteUserById)
-//search by name
-router.get('/search', userController.search)
-router.get('/searchByRentAmount', userController.searchByRentAmount)
-router.get('/:id', userController.getUserById)
+// create users with image upload
+router.post(
+    '/owners',
+    uploadfile.single('image_User'),
+    userController.createOwnerWithImg
+);
+router.post(
+    '/tenants',
+    uploadfile.single('image_User'),
+    userController.createTenantWithImg
+);
+router.post(
+    '/vendors',
+    uploadfile.single('image_User'),
+    userController.createVendorWithImg
+);
 
-//admin endpoints
-router.post('/admin/ban/:id', roleController.banUser)
-router.post('/admin/approve/:id', roleController.approveUser)
-router.get('/admin/dashboard', roleController.viewDashboard)
+// create admin (no image)
+router.post('/admin', userController.createAdmin);
 
-//owner endpoints
-router.post('/owner/property', roleController.addProperty)
-router.get('/owner/properties/:ownerId', roleController.getAllPropertyByOwner)
-router.put('/owner/property', roleController.updateProperty)
-router.post('/owner/unit', roleController.addUnit)
-router.get('/units/:propertyId', roleController.getAllUnitByProperty)
-router.put('/owner/unit/:unitId', roleController.updateUnitById)
-router.get('/owner/payments', roleController.viewPayments)
-router.post('/owner/assign-vendor', roleController.assignVendor)
-router.post('/owner/approve-application', roleController.approveApplication);
-router.post('/owner/review-termination', roleController.reviewLeaseTermination);
+// login
+router.post('/login', userController.loginUser);
 
-//tenant endpoints
-router.post('/tenant/apply', roleController.applyForUnit)
-router.post('/tenant/request-termination', roleController.requestLeaseTermination)
-router.post('/tenant/signLease', roleController.signLease)
-router.post('/tenant/pay-Invoice', roleController.payInvoice)
-//vendor endpoints
-router.post('/vendor/accept-job', roleController.acceptJob)
-router.post('/vendor/add-report', roleController.addRepairReport)
+/* ---------- ADMIN ROUTES ---------- */
 
-router.delete('/owner/unit/:unitId', roleController.deleteUnit)
-router.delete('/owner/property', roleController.deleteProperty)
+router.post('/admin/ban/:id', adminController.banUser);
+router.post('/admin/approve/:id', adminController.approveUser);
+router.get('/admin/dashboard', adminController.viewDashboard);
 
+/* ---------- OWNER ROUTES ---------- */
 
-module.exports = router;  
+// properties
+router.post('/owner/property', ownerController.addProperty);
+router.get('/owner/properties/:ownerId', ownerController.getAllPropertyByOwner);
+router.get('/owner/properties', ownerController.getAllPorperties);
+router.put('/owner/property', ownerController.updateProperty);
+router.delete('/owner/property', ownerController.deleteProperty);
+
+// units
+router.post('/owner/unit', ownerController.addUnit);
+router.get('/owner/units/:propertyId', ownerController.getAllUnitByProperty);
+router.get('/owner/units', ownerController.getAllUnits);
+router.put('/owner/unit/:unitId', ownerController.updateUnitById);
+router.delete('/owner/unit/:unitId', ownerController.deleteUnit);
+
+// unit search (by rent amount)
+router.get('/owner/units-search', ownerController.searchByRentAmount);
+
+// applications / leases
+router.post('/owner/approve-application', ownerController.approveApplication);
+router.post('/owner/review-termination', ownerController.reviewLeaseTermination);
+
+// payments & vendors
+router.get('/owner/payments', ownerController.viewPayments);
+router.post('/owner/assign-vendor', ownerController.assignVendor);
+
+/* ---------- TENANT ROUTES ---------- */
+
+router.post('/tenant/apply', tenantController.applyForUnit);
+router.post('/tenant/sign-lease', tenantController.signLease);
+router.post('/tenant/request-termination', tenantController.requestLeaseTermination);
+router.post('/tenant/pay-invoice', tenantController.payInvoice);
+
+/* ---------- VENDOR ROUTES ---------- */
+
+router.post('/vendor/accept-job', vendorController.acceptJob);
+router.post('/vendor/add-report', vendorController.addRepairReport);
+
+/* ---------- GENERIC USER ROUTES ---------- */
+
+// list & search users
+router.get('/', userController.getAllUsers);
+router.get('/by-role/:role', userController.getUsersByRole);
+router.get('/search', userController.search); // (uses name from body; you can later change to query)
+
+// update / delete must come BEFORE :id read if paths overlap
+router.put('/:id', userController.updateUserById);
+router.delete('/:id', userController.deleteUserById);
+
+// get single user (keep LAST to avoid conflicts with above routes like /admin/..., /owner/...)
+router.get('/:id', userController.getUserById);
+
+module.exports = router;
