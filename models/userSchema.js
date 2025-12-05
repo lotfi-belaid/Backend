@@ -44,17 +44,17 @@ const userSchema = new mongoose.Schema({
             message: 'Invalid IBAN format',
         },
     },
-    ownerTotalProperties: {
-        type: Number,
+        ownerTotalProperties: {
+            type: Number,
 
-        min: 0,
-        validate: {
-            validator: Number.isInteger,
-            message: 'Total properties must be an Number',
-        },
-        required: function () {
-            return this.role === 'OWNER';
-        },
+            min: 0,
+            validate: {
+                validator: Number.isInteger,
+                message: 'Total properties must be an Number',
+            },
+            required: function () {
+                return this.role === 'OWNER';
+            },
     },
     //tenant attributes
     tenantBirthDate: { type: Date },

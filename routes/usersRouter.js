@@ -18,6 +18,9 @@ router.post('/login', userController.loginUser)
 router.get('/', userController.getAllUsers)
 router.get('/by-role/:role', userController.getUsersByRole)
 //update and delete
+router.get('/units', roleController.getAllUnits)
+router.get('/properties', roleController.getAllPorperties)
+
 router.put('/:id', userController.updateUserById)
 router.delete('/:id', userController.deleteUserById)
 //search by name
@@ -51,7 +54,7 @@ router.post('/tenant/pay-Invoice', roleController.payInvoice)
 router.post('/vendor/accept-job', roleController.acceptJob)
 router.post('/vendor/add-report', roleController.addRepairReport)
 
-router.delete('/owner/unit/:unitId',roleController.deleteUnit)
+router.delete('/owner/unit/:unitId', roleController.deleteUnit)
 router.delete('/owner/property', roleController.deleteProperty)
 
 

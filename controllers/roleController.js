@@ -86,6 +86,9 @@ module.exports.addProperty = async (req, res) => {
 
         const property = new Property({ ownerId, name, address, city, postalCode });
         await property.save();
+        //increment owner's total properties count
+        owner.ownerTotalProperties = (owner.ownerTotalProperties ?? 0) + 1;
+        await owner.save();
 
         res.status(201).json({ message: 'Property created successfully', property });
     } catch (error) {
@@ -232,6 +235,16 @@ module.exports.getAllPropertyByOwner = async (req, res) => {
         return res.status(500).json({ message: "Server Error", error });
     }
 };
+//get all Property
+module.exports.getAllPorperties=async(req,res)=>{
+    try{
+        const properties=await Property.find();
+        res.json(properties);
+    }
+    catch{
+        return res.status(500).json({message:"Server Error"});
+    }
+};
 //add unit to property
 module.exports.addUnit = async (req, res) => {
     try {
@@ -344,7 +357,7 @@ module.exports.getAllUnitByProperty = async (req, res) => {
         const property = await Property.findById(propertyId);
         if (!property)
             return res.status(404).json({ message: "Property not found" });
-        const units = await Unit.find(propertyId);
+        const units = await Unit.find({ propertyId });
         if (!units) return res.status(404).json({ message: "Units not found" });
         res.status(200).json(units);
     }
@@ -352,6 +365,16 @@ module.exports.getAllUnitByProperty = async (req, res) => {
         return res.status(500).json({ message: "Server Error" });
     }
 
+};
+//get All units 
+module.exports.getAllUnits = async (req, res) => {
+    try {
+        const units = await Unit.find();
+        res.json(units);
+    }
+    catch {
+        return res.status(500).json({ message: "Server Error" });
+    }
 };
 // Approve tenant application (and then creates lease automatically)
 module.exports.approveApplication = async (req, res) => {
