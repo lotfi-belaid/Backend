@@ -1,6 +1,8 @@
 const userModel = require('../models/userSchema');
 const Unit = require('../models/unitSchema');
-
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const passwordPolicy=/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 /* Create Users by role Tenant, Owner, Vendor, Admin */
 
 // Create Admin
@@ -176,8 +178,8 @@ module.exports.getUsersByRole = async (req, res) => {
 module.exports.updateUserById = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, email, phone } = req.body;
-        const users = await userModel.findByIdAndUpdate(id, { name, email, phone }, { new: true, runValidators: true });
+        const { name, phone,image_user } = req.body;
+        const users = await userModel.findByIdAndUpdate(id, { name, phone,image_user })// to return the updated document;
         if (!users) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -217,8 +219,14 @@ module.exports.loginUser = async (req, res) => {
         }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ message: "Invalid password" });
+        const payload={
+            id:user._id,
+            role:user.role,
+        }
+        const token=jwt.sign(payload,process.env.SECRET_JWT,{expiresIn:'7h'});
         res.json({
             message: 'Login successful',
+            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -242,4 +250,5 @@ module.exports.search = async (req, res) => {
         res.status(500).json({ message: "Server Error", error });
     }
 };
+
 

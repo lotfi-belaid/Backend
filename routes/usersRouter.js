@@ -7,7 +7,9 @@ const ownerController = require('../controllers/ownerController');
 const tenantController = require('../controllers/tenantController');
 const vendorController = require('../controllers/vendorController');
 const userController = require('../controllers/userController');
+const paymentController=require('../controllers/paymentController');
 const uploadfile = require('../middlewares/uploadfile');
+const auth=require('../middlewares/authMiddleware');
 
 /* ---------- AUTH / USER CREATION ---------- */
 
@@ -36,48 +38,55 @@ router.post('/login', userController.loginUser);
 
 /* ---------- ADMIN ROUTES ---------- */
 
-router.post('/admin/ban/:id', adminController.banUser);
-router.post('/admin/approve/:id', adminController.approveUser);
-router.get('/admin/dashboard', adminController.viewDashboard);
+router.post('/admin/ban/:id', auth, adminController.banUser);
+router.post('/admin/approve/:id', auth, adminController.approveUser);
+router.get('/admin/dashboard', auth, adminController.viewDashboard);
 
 /* ---------- OWNER ROUTES ---------- */
 
 // properties
-router.post('/owner/property', ownerController.addProperty);
-router.get('/owner/properties/:ownerId', ownerController.getAllPropertyByOwner);
-router.get('/owner/properties', ownerController.getAllPorperties);
-router.put('/owner/property', ownerController.updateProperty);
-router.delete('/owner/property', ownerController.deleteProperty);
+router.post('/owner/property', auth, ownerController.addProperty);
+router.get('/owner/properties/:ownerId', auth, ownerController.getAllPropertyByOwner);
+router.get('/owner/properties', auth, ownerController.getAllPorperties);
+router.put('/owner/property', auth, ownerController.updateProperty);
+router.delete('/owner/property', auth, ownerController.deleteProperty);
 
 // units
-router.post('/owner/unit', ownerController.addUnit);
-router.get('/owner/units/:propertyId', ownerController.getAllUnitByProperty);
-router.get('/owner/units', ownerController.getAllUnits);
-router.put('/owner/unit/:unitId', ownerController.updateUnitById);
-router.delete('/owner/unit/:unitId', ownerController.deleteUnit);
+router.post('/owner/unit', auth, ownerController.addUnit);
+router.get('/owner/units/:propertyId', auth, ownerController.getAllUnitByProperty);
+router.get('/owner/units', auth, ownerController.getAllUnits);
+router.put('/owner/unit/:unitId', auth, ownerController.updateUnitById);
+router.delete('/owner/unit/:unitId', auth, ownerController.deleteUnit);
 
-// unit search (by rent amount)
-router.get('/owner/units-search', ownerController.searchByRentAmount);
 
 // applications / leases
-router.post('/owner/approve-application', ownerController.approveApplication);
-router.post('/owner/review-termination', ownerController.reviewLeaseTermination);
+router.post('/owner/approve-application', auth, ownerController.approveApplication);
+router.post('/owner/review-termination', auth, ownerController.reviewLeaseTermination);
 
 // payments & vendors
-router.get('/owner/payments', ownerController.viewPayments);
-router.post('/owner/assign-vendor', ownerController.assignVendor);
+router.get('/owner/payments', auth, ownerController.viewPayments);
+router.post('/owner/assign-vendor', auth, ownerController.assignVendor);
 
 /* ---------- TENANT ROUTES ---------- */
 
-router.post('/tenant/apply', tenantController.applyForUnit);
-router.post('/tenant/sign-lease', tenantController.signLease);
-router.post('/tenant/request-termination', tenantController.requestLeaseTermination);
-router.post('/tenant/pay-invoice', tenantController.payInvoice);
+router.post('/tenant/apply', auth, tenantController.applyForUnit);
+router.post('/tenant/sign-lease', auth, tenantController.signLease);
+router.post('/tenant/request-termination', auth, tenantController.requestLeaseTermination);
+router.post('/tenant/pay-invoice', auth, tenantController.payInvoice);
 
+// unit search
+router.get('/tenant/units-search', tenantController.searchByRentAmount);
 /* ---------- VENDOR ROUTES ---------- */
 
-router.post('/vendor/accept-job', vendorController.acceptJob);
-router.post('/vendor/add-report', vendorController.addRepairReport);
+router.post('/vendor/accept-job', auth, vendorController.acceptJob);
+router.post('/vendor/add-report', auth, vendorController.addRepairReport);
+
+
+/* ---------- PAYMENT ROUTES ---------- */
+router.post(
+    '/payment/create-intent', auth, paymentController.createPaymentIntent);
+router.post(
+    '/webhook',paymentController.handleStripeWebhook);
 
 /* ---------- GENERIC USER ROUTES ---------- */
 

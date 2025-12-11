@@ -8,7 +8,12 @@ const Maintenance = require('../models/maintenanceSchema');
 //add property
 module.exports.addProperty = async (req, res) => {
     try {
-        const { ownerId, name, address, city, postalCode } = req.body;
+        const ownerId = req.user?.id;
+        if (!ownerId) {
+            return res.status(401).json({ message: 'Unauthorized: no user in token' });
+        }
+
+        const { name, address, city, postalCode } = req.body;
         const owner = await User.findById(ownerId);
 
         if (!owner || owner.role !== 'OWNER')
@@ -34,7 +39,12 @@ module.exports.addProperty = async (req, res) => {
 //update property details
 module.exports.updateProperty = async (req, res) => {
     try {
-        const { ownerId, propertyId, name, address, city, postalCode, description } = req.body;
+        const ownerId = req.user?.id;
+
+        if (!ownerId) {
+            return res.status(401).json({ message: 'Unauthorized: no user in token' });
+        }
+        const { propertyId, name, address, city, postalCode, description } = req.body;
 
         // Validate owner
         const owner = await User.findById(ownerId);
@@ -76,7 +86,9 @@ module.exports.updateProperty = async (req, res) => {
 //delete property
 module.exports.deleteProperty = async (req, res) => {
     try {
-        const { ownerId, propertyId } = req.body;
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
+        const {  propertyId } = req.body;
 
         const owner = await User.findById(ownerId);
         if (!owner || owner.role !== 'OWNER')
@@ -101,7 +113,8 @@ module.exports.deleteProperty = async (req, res) => {
 //get all the properties for the owner 
 module.exports.getAllPropertyByOwner = async (req, res) => {
     try {
-        const { ownerId } = req.params;
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         const owner = await User.findById(ownerId);
         if (!owner || owner.role !== 'OWNER')
             return res.status(403).json({ message: "only owners can see own Properties" });
@@ -129,7 +142,9 @@ module.exports.getAllPorperties = async (req, res) => {
 //add unit to property
 module.exports.addUnit = async (req, res) => {
     try {
-        const { ownerId, propertyId, unitNumber, bedrooms, areaM2, rentAmount, depositAmount } = req.body;
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
+        const { propertyId, unitNumber, bedrooms, areaM2, rentAmount, depositAmount } = req.body;
         const owner = await User.findById(ownerId);
         if (!owner || owner.role !== 'OWNER')
             return res.status(403).json({ message: 'Only owners can add units' });
@@ -163,9 +178,10 @@ module.exports.addUnit = async (req, res) => {
 //update Unit
 module.exports.updateUnitById = async (req, res) => {
     try {
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         const { unitId } = req.params
         const {
-            ownerId,
             propertyId,
             unitNumber,
             bedrooms,
@@ -209,8 +225,10 @@ module.exports.updateUnitById = async (req, res) => {
 //delete unit 
 module.exports.deleteUnit = async (req, res) => {
     try {
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         const { unitId } = req.params;
-        const { ownerId, propertyId } = req.body;
+        const { propertyId } = req.body;
         const owner = await User.findById(ownerId);
         if (!owner || owner.role !== "OWNER")
             return res.status(403).json({ message: "only owner can delete units" });
@@ -234,6 +252,8 @@ module.exports.deleteUnit = async (req, res) => {
 //get all units for specific property
 module.exports.getAllUnitByProperty = async (req, res) => {
     try {
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         const { propertyId } = req.params;
         const property = await Property.findById(propertyId);
         if (!property)
@@ -250,6 +270,8 @@ module.exports.getAllUnitByProperty = async (req, res) => {
 //get All units 
 module.exports.getAllUnits = async (req, res) => {
     try {
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         const units = await Unit.find();
         res.json(units);
     }
@@ -257,22 +279,13 @@ module.exports.getAllUnits = async (req, res) => {
         return res.status(500).json({ message: "Server Error" });
     }
 };
-//search units by rent amount
-module.exports.searchByRentAmount = async (req, res) => {
-    try {
-        const { sort } = req.query;
-        const sortedList = sort === 'Highest Price' ? -1 : 1;
-        const units = await Unit.find().sort({ rentAmount: sortedList });
-        res.status(200).json(units);
-    }
-    catch (error) {
-        return res.status(500).json({ message: "Server Error", error })
-    }
-};
+
 // Approve tenant application (and then creates lease automatically)
 module.exports.approveApplication = async (req, res) => {
     try {
-        const { ownerId, tenantId, unitId, leaseStartDate, leaseEndDate, rentAmount } = req.body;
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
+        const { tenantId, unitId, leaseStartDate, leaseEndDate, rentAmount } = req.body;
 
         const owner = await User.findById(ownerId);
         if (!owner || owner.role !== 'OWNER')
@@ -323,7 +336,9 @@ module.exports.approveApplication = async (req, res) => {
 //approve or terminate lease termination request
 module.exports.reviewLeaseTermination = async (req, res) => {
     try {
-        const { ownerId, leaseId, decision } = req.body;
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
+        const { leaseId, decision } = req.body;
 
         const lease = await Lease.findById(leaseId);
         if (!lease) return res.status(404).json({ message: 'Lease not found' });
@@ -361,6 +376,8 @@ module.exports.reviewLeaseTermination = async (req, res) => {
 // assign vendor to maintenance task
 module.exports.assignVendor = async (req, res) => {
     try {
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         const { vendorId, maintenanceId } = req.body;
         const vendor = await User.findById(vendorId);
         const maintenance = await Maintenance.findById(maintenanceId);
@@ -387,6 +404,8 @@ module.exports.assignVendor = async (req, res) => {
 //view Payments
 module.exports.viewPayments = async (req, res) => {
     try {
+        const ownerId=req.user?.id;
+        if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
         // Fetch all invoices and populate tenant details
         const invoices = await Invoice.find()
             .populate('tenantId', 'name email') // shows tenant name and email
