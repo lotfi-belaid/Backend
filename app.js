@@ -1,52 +1,68 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const http = require('http');
 
-const http = require('http'); //1 importation du module http
+// Load config (includes dotenv)
+const config = require('./config');
+const { connectToMongoDB } = require('./config/db');
 
-require('dotenv').config();
+// Import routes
+const indexRouter = require('./routes/index');
+const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const ownerRoutes = require('./routes/ownerRoutes');
+const tenantRoutes = require('./routes/tenantRoutes');
+const vendorRoutes = require('./routes/vendorRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const userRoutes = require('./routes/userRoutes');
 
-const { connectToMongoDB } = require('./db/db');
+// Import error handler
+const errorHandler = require('./middlewares/errorHandler');
+const AppError = require('./utils/AppError');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/usersRouter');
+const app = express();
 
-var app = express();
-
-
+// Middleware
 app.use(logger('dev'));
-app.use(express.json({verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
-  }}));
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString();
+    }
+}));
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Routes
 app.use('/index', indexRouter);
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/owner', ownerRoutes);
+app.use('/api/tenant', tenantRoutes);
+app.use('/api/vendor', vendorRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/users', userRoutes);
+
+// Backward compatibility - keep old /users routes working
+const usersRouter = require('./routes/usersRouter');
 app.use('/users', usersRouter);
 
-// catch 404 and forward to error handler
-app.use(function (req, res, next) {
-  next(createError(404));
+// 404 handler
+app.use((req, res, next) => {
+    next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404));
 });
 
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+// Global error handler
+app.use(errorHandler);
 
-  // render the error page
-  res.status(err.status || 500)
-  res.json('error');
+// Create and start server
+const server = http.createServer(app);
+
+server.listen(config.port, () => {
+    connectToMongoDB();
+    console.log(`Server is running on port ${config.port}`);
 });
 
-const server = http.createServer(app); //2 creation du serveur
-
-//3 le serveur ecoute sur le port 5000
-server.listen(process.env.Port, () => {
-  connectToMongoDB();
-  console.log('Server is running on port 5000');
-});
+module.exports = app;
