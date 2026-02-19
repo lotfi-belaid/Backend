@@ -1,9 +1,22 @@
-const mongoose = require('mongoose')
-module.exports.connectToMongoDB = async () => {
-    mongoose.set('strictQuery', false);//It makes Mongoose more flexible, so you can search for data using any field, even if that field isn’t in your schema. This is sometimes useful, but can also make your queries less strict.
-    mongoose.connect('mongodb+srv://lotfi_belaid:lotfibelaid@cluster0.yrdne1w.mongodb.net/').then(() => {
-        console.log("connected to mongoDb successfully")
-    }).catch((err) => {
-        console.error("error connecting to mongoDb", err)
-    })
-}   
+const mongoose = require("mongoose");
+
+const connectToMongoDB = async () => {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("MONGODB_URI is not defined in environment variables");
+  }
+
+  mongoose.set("strictQuery", false);
+  await mongoose.connect(uri);
+  console.log("Connected to MongoDB");
+};
+
+const disconnectFromMongoDB = async () => {
+  await mongoose.connection.close();
+  console.log("MongoDB connection closed");
+};
+
+module.exports = {
+  connectToMongoDB,
+  disconnectFromMongoDB
+};

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
-const passwordPolicy=/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+const passwordPolicy = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 const userSchema = new mongoose.Schema({
 
     name: { type: String, required: true, trim: true },
@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     image_user: { type: String, default: "client.png" },
 
     password: {
-        type: String, required: true, minlength: 8, 
+        type: String, required: true, minlength: 8,
     },
 
     role: { type: String, enum: ["ADMIN", "OWNER", "TENANT", "VENDOR"], default: "TENANT" },
@@ -44,17 +44,17 @@ const userSchema = new mongoose.Schema({
             message: 'Invalid IBAN format',
         },
     },
-        ownerTotalProperties: {
-            type: Number,
+    ownerTotalProperties: {
+        type: Number,
 
-            min: 0,
-            validate: {
-                validator: Number.isInteger,
-                message: 'Total properties must be an Number',
-            },
-            required: function () {
-                return this.role === 'OWNER';
-            },
+        min: 0,
+        validate: {
+            validator: Number.isInteger,
+            message: 'Total properties must be an Number',
+        },
+        required: function () {
+            return this.role === 'OWNER';
+        },
     },
     //tenant attributes
     tenantBirthDate: { type: Date },
@@ -64,12 +64,8 @@ const userSchema = new mongoose.Schema({
         min: 0,
     },
     tenantCurrentLeaseId: {
-        type: Number,
-        min: 0,
-        validate: {
-            validator: Number.isInteger,
-            message: 'Current lease ID must be a whole number',
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Lease',
     },
     //vendor attributes
     vendorServiceType: {
@@ -91,8 +87,34 @@ const userSchema = new mongoose.Schema({
     isBanned: { type: Boolean, default: false },
     isApproved: { type: Boolean, default: false },
 },
-    { timestamps: true }
+    {
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true }
+    }
 );
+
+// Virtual for Owner's Properties
+userSchema.virtual('properties', {
+    ref: 'Property',
+    localField: '_id',
+    foreignField: 'ownerId'
+});
+
+// Virtual for Tenant's Leases (History)
+userSchema.virtual('leases', {
+    ref: 'Lease',
+    localField: '_id',
+    foreignField: 'tenantId'
+});
+
+// Virtual for Vendor's Assigned Maintenance
+userSchema.virtual('assignedMaintenance', {
+    ref: 'Maintenance',
+    localField: '_id',
+    foreignField: 'vendorId'
+});
+
 // clean up non-role specific fields before saving
 userSchema.pre('validate', function (next) {
     const role = this.role;
@@ -130,6 +152,7 @@ userSchema.pre('save', async function (next) {
 })
 //hide password and __v when converting to JSON
 userSchema.set('toJSON', {
+    virtuals: true, // ensure virtuals are included
     transform: (_, ret) => {
         delete ret.password;//removing password from the response
         delete ret.__v;//removing __v from the response

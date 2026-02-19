@@ -1,52 +1,88 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+var createError = require("http-errors");
+var express = require("express");
+var path = require("path");
+var cookieParser = require("cookie-parser");
+var logger = require("morgan");
 
-const http = require('http'); //1 importation du module http
+const http = require("http");
 
-require('dotenv').config();
+require("dotenv").config();
 
-const { connectToMongoDB } = require('./db/db');
+const { connectToMongoDB, disconnectFromMongoDB } = require("./db/db");
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/usersRouter');
+var indexRouter = require("./routes/index");
+var authRouter = require("./routes/authRouter");
+var adminRouter = require("./routes/adminRouter");
+var ownerRouter = require("./routes/ownerRouter");
+var tenantRouter = require("./routes/tenantRouter");
+var vendorRouter = require("./routes/vendorRouter");
+var paymentRouter = require("./routes/paymentRouter");
+var userCrudRouter = require("./routes/userCrudRouter");
 
 var app = express();
 
-
-app.use(logger('dev'));
-app.use(express.json({verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
-  }}));
+app.use(logger("dev"));
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString();
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "public")));
 
-app.use('/index', indexRouter);
-app.use('/users', usersRouter);
+app.use("/index", indexRouter);
+app.use("/users", authRouter);
+app.use("/users/admin", adminRouter);
+app.use("/users/owner", ownerRouter);
+app.use("/users/tenant", tenantRouter);
+app.use("/users/vendor", vendorRouter);
+app.use("/users", paymentRouter);
+app.use("/users", userCrudRouter);
 
-// catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
   res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  res.locals.error = req.app.get("env") === "development" ? err : {};
 
-  // render the error page
-  res.status(err.status || 500)
-  res.json('error');
+  res.status(err.status || 500);
+  res.json("error");
 });
 
-const server = http.createServer(app); //2 creation du serveur
+const server = http.createServer(app);
+const PORT = process.env.PORT || 5000;
 
-//3 le serveur ecoute sur le port 5000
-server.listen(process.env.Port, () => {
-  connectToMongoDB();
-  console.log('Server is running on port 5000');
-});
+const startServer = async () => {
+  try {
+    await connectToMongoDB();
+    server.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+const shutdown = async (signal) => {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  server.close(async () => {
+    try {
+      await disconnectFromMongoDB();
+      process.exit(0);
+    } catch (error) {
+      console.error("Error during shutdown:", error);
+      process.exit(1);
+    }
+  });
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+startServer();
