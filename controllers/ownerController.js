@@ -406,9 +406,15 @@ module.exports.viewPayments = async (req, res) => {
     try {
         const ownerId=req.user?.id;
         if(!ownerId) return res.status(401).json({message:"Unauthorized: no user in token"});
+        const ownerLeases = await Lease.find({ ownerId }).select('_id');
+        const leaseIds = ownerLeases.map((leaseDoc) => leaseDoc._id);
         // Fetch all invoices and populate tenant details
-        const invoices = await Invoice.find()
-            .populate('tenantId', 'name email') // shows tenant name and email
+        const invoices = await Invoice.find({ leaseId: { $in: leaseIds } })
+            .populate({
+                path: 'leaseId',
+                select: 'tenantId',
+                populate: { path: 'tenantId', select: 'name email' }
+            })
             .sort({ dueDate: -1 }); // sort by most recent first
 
         // If there are no invoices
@@ -421,8 +427,8 @@ module.exports.viewPayments = async (req, res) => {
             message: 'Payments fetched successfully.',
             payments: invoices.map(inv => ({
                 id: inv._id,
-                tenant: inv.tenantId ? inv.tenantId.name : 'Unknown Tenant',
-                email: inv.tenantId ? inv.tenantId.email : 'No email',
+                tenant: inv.leaseId?.tenantId ? inv.leaseId.tenantId.name : 'Unknown Tenant',
+                email: inv.leaseId?.tenantId ? inv.leaseId.tenantId.email : 'No email',
                 amount: inv.amount,
                 status: inv.status,
                 dueDate: inv.dueDate,

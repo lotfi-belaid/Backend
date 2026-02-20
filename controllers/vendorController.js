@@ -8,7 +8,9 @@ const Maintenance = require('../models/maintenanceSchema');
 //acceptJob
 module.exports.acceptJob = async (req, res) => {
     try {
-        const { vendorId, maintenanceId } = req.body;
+        const vendorId = req.user?.id;
+        const { maintenanceId } = req.body;
+        if (!vendorId) return res.status(401).json({ message: "Unauthorized: no user in token" });
         const vendor = await User.findById(vendorId);
         const maintenance = await Maintenance.findById(maintenanceId);
 
@@ -20,6 +22,9 @@ module.exports.acceptJob = async (req, res) => {
             return res.status(403).json({ message: 'Your account is not approved yet' });
         if (!maintenance)
             return res.status(404).json({ message: 'Maintenance job not found' });
+        if (maintenance.vendorId && String(maintenance.vendorId) !== String(vendorId))
+            return res.status(403).json({ message: 'This job is assigned to another vendor' });
+        maintenance.vendorId = vendorId;
         maintenance.status = 'IN_PROGRESS';
         await maintenance.save();
 
@@ -31,11 +36,23 @@ module.exports.acceptJob = async (req, res) => {
 //add Repair Report and Mark as Done
 module.exports.addRepairReport = async (req, res) => {
     try {
+        const vendorId = req.user?.id;
+        if (!vendorId) return res.status(401).json({ message: "Unauthorized: no user in token" });
         const { maintenanceId, description, cost } = req.body;
+
+        const vendor = await User.findById(vendorId);
+        if (!vendor || vendor.role !== 'VENDOR')
+            return res.status(403).json({ message: 'Only vendors can submit repair reports' });
+        if (vendor.isBanned)
+            return res.status(403).json({ message: 'Your account is banned' });
+        if (!vendor.isApproved)
+            return res.status(403).json({ message: 'Your account is not approved yet' });
 
         const maintenance = await Maintenance.findById(maintenanceId);
         if (!maintenance)
             return res.status(404).json({ message: 'Maintenance not found' });
+        if (String(maintenance.vendorId) !== String(vendorId))
+            return res.status(403).json({ message: 'You can only report your assigned jobs' });
 
         maintenance.report = {
             description,

@@ -50,7 +50,7 @@ module.exports.createOwnerWithImg = async (req, res) => {
         };
 
         if (req.file) {
-            userData.image_User = req.file.filename;
+            userData.image_user = req.file.filename;
         }
 
         const newUser = new userModel(userData);
@@ -87,7 +87,7 @@ module.exports.createTenantWithImg = async (req, res) => {
         };
 
         if (req.file) {
-            userData.image_User = req.file.filename;
+            userData.image_user = req.file.filename;
         }
 
         const newUser = new userModel(userData);
@@ -125,7 +125,7 @@ module.exports.createVendorWithImg = async (req, res) => {
         };
 
         if (req.file) {
-            userData.image_User = req.file.filename;
+            userData.image_user = req.file.filename;
         }
 
         const newUser = new userModel(userData);
@@ -242,7 +242,7 @@ module.exports.loginUser = async (req, res) => {
 //search Users by name
 module.exports.search = async (req, res) => {
     try {
-        const { name } = req.body;
+        const name = req.query.name || req.body?.name || "";
         const users = await userModel.find({ name: { $regex: name, $options: 'i' } });
         res.status(200).json(users);
     }

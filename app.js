@@ -25,7 +25,9 @@ app.use(logger("dev"));
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      req.rawBody = buf.toString();
+      if (req.originalUrl === "/users/webhook") {
+        req.rawBody = buf;
+      }
     },
   }),
 );
@@ -51,7 +53,14 @@ app.use(function (err, req, res, next) {
   res.locals.error = req.app.get("env") === "development" ? err : {};
 
   res.status(err.status || 500);
-  res.json("error");
+  res.json({
+    success: false,
+    error: {
+      code: err.code || "INTERNAL_ERROR",
+      message: err.message || "Unexpected server error",
+      details: req.app.get("env") === "development" ? err.stack : null,
+    },
+  });
 });
 
 const server = http.createServer(app);

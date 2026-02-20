@@ -69,7 +69,7 @@ module.exports.viewDashboard = async (req, res) => {
     const pendingApprovals = await User.countDocuments({ isApproved: false });
 
     const invoicesPaid = await Invoice.countDocuments({ status: "PAID" });
-    const invoicesPending = await Invoice.countDocuments({ status: "PENDING" });
+    const invoicesPending = await Invoice.countDocuments({ status: "UNPAID" });
 
     res.json({
       message: "Dashboard summary fetched successfully",
