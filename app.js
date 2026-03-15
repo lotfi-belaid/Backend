@@ -3,21 +3,14 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
-
 const http = require("http");
 
 require("dotenv").config();
 
 const { connectToMongoDB, disconnectFromMongoDB } = require("./db/db");
 
-var indexRouter = require("./routes/index");
-var authRouter = require("./routes/authRouter");
-var adminRouter = require("./routes/adminRouter");
-var ownerRouter = require("./routes/ownerRouter");
-var tenantRouter = require("./routes/tenantRouter");
-var vendorRouter = require("./routes/vendorRouter");
-var paymentRouter = require("./routes/paymentRouter");
-var userCrudRouter = require("./routes/userCrudRouter");
+// Centralized API Router
+var apiRouter = require("./routes/apiRouter");
 
 var app = express();
 
@@ -25,7 +18,8 @@ app.use(logger("dev"));
 app.use(
   express.json({
     verify: (req, res, buf) => {
-      if (req.originalUrl === "/users/webhook") {
+      // Correct path for Stripe Webhooks in the new structure
+      if (req.originalUrl === "/api/invoices/webhook") {
         req.rawBody = buf;
       }
     },
@@ -35,19 +29,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use("/index", indexRouter);
-app.use("/users", authRouter);
-app.use("/users/admin", adminRouter);
-app.use("/users/owner", ownerRouter);
-app.use("/users/tenant", tenantRouter);
-app.use("/users/vendor", vendorRouter);
-app.use("/users", paymentRouter);
-app.use("/users", userCrudRouter);
+// Mount all API routes under /api
+app.use("/api", apiRouter);
 
+// Catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
+// Error handler
 app.use(function (err, req, res, next) {
   res.locals.message = err.message;
   res.locals.error = req.app.get("env") === "development" ? err : {};
