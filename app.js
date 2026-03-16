@@ -11,6 +11,7 @@ const { connectToMongoDB, disconnectFromMongoDB } = require("./db/db");
 
 // Centralized API Router
 var apiRouter = require("./routes/apiRouter");
+const notificationRouter = require("./routes/notificationRouter"); // Added notificationRouter
 
 var app = express();
 
@@ -31,6 +32,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Mount all API routes under /api
 app.use("/api", apiRouter);
+app.use("/api/notifications", notificationRouter); // Mounted notificationRouter
 
 // Catch 404 and forward to error handler
 app.use(function (req, res, next) {

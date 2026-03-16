@@ -6,7 +6,8 @@ const propertySchema = new mongoose.Schema({
     postalCode: { type: String },
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     createdAt: { type: Date, default: Date.now },
-    description: { type: String }
+    description: { type: String },
+    images: [{ type: String }]
 }, {
     toJSON: { virtuals: true },
     toObject: { virtuals: true }

@@ -22,18 +22,19 @@ const leaseSchema = new mongoose.Schema({
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     reviewedAt: Date
   },
-
-
+  signedContractUrl: { type: String },
+  isArchived: { type: Boolean, default: false },
+  previousVersionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lease' }
 }, {
   toJSON: { virtuals: true },
   toObject: { virtuals: true }
 });
 
-// Virtual for Invoices
+// Virtual for Invoices 
 leaseSchema.virtual('invoices', {
-  ref: 'Invoice',
-  localField: '_id',
-  foreignField: 'leaseId'
+  ref: 'Invoice',//look to the INvoice model
+  localField: '_id',//use this lease Id
+  foreignField: 'leaseId'//and find all invoices where leaseId(localField) match that id)
 });
 
 

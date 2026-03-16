@@ -8,7 +8,8 @@ const unitSchema = new mongoose.Schema({
     areaM2: Number,
     rentAmount: { type: Number, required: true },
     depositAmount: { type: Number },
-    status: { type: String, enum: ['AVAILABLE', 'OCCUPIED'], default: 'AVAILABLE' },
+    status: { type: String, enum: ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE'], default: 'AVAILABLE' },
+    waitlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, {
     toJSON: { virtuals: true },
     toObject: { virtuals: true }

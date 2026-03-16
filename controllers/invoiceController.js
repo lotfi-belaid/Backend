@@ -67,3 +67,13 @@ module.exports.payInvoice = async (req, res) => {
     res.status(error.status || 500).json({ message: error.message || "Server Error", error });
   }
 };
+
+// get Tenant Invoices
+module.exports.getTenantInvoices = async (req, res) => {
+  try {
+    const invoices = await paymentService.getTenantInvoices(req.user.id);
+    res.json({ data: invoices });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching invoices", error });
+  }
+};

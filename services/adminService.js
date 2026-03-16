@@ -3,6 +3,7 @@ const Property = require("../models/propertySchema");
 const Lease = require("../models/leaseSchema");
 const Maintenance = require("../models/maintenanceSchema");
 const Invoice = require("../models/invoiceSchema");
+const Unit = require("../models/unitSchema");
 const mongoose = require("mongoose");
 
 async function banUser(userId) {
@@ -106,8 +107,80 @@ async function getDashboardStats() {
   };
 }
 
+async function getAdvancedAnalytics() {
+  const [
+    totalUnits,
+    occupiedUnits,
+    totalRentCollected,
+    totalMaintenanceCost,
+    maintenanceHeatmap,
+  ] = await Promise.all([
+    Unit.countDocuments(),
+    Unit.countDocuments({ status: "OCCUPIED" }),
+    Invoice.aggregate([
+      { $match: { status: "PAID" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]),
+    Maintenance.aggregate([
+      { $match: { status: "DONE" } },
+      { $group: { _id: null, total: { $sum: "$report.cost" } } }
+    ]),
+    Maintenance.aggregate([
+      { $match: { status: "DONE" } },
+      { 
+        $lookup: {
+          from: "units",
+          localField: "unitId",
+          foreignField: "_id",
+          as: "unit"
+        }
+      },
+      { $unwind: "$unit" },
+      {
+        $group: {
+          _id: "$unit.propertyId",
+          totalCost: { $sum: "$report.cost" }
+        }
+      },
+      {
+        $lookup: {
+          from: "properties",
+          localField: "_id",
+          foreignField: "_id",
+          as: "property"
+        }
+      },
+      { $unwind: "$property" },
+      {
+        $project: {
+          propertyName: "$property.name",
+          totalCost: 1
+        }
+      },
+      { $sort: { totalCost: -1 } }
+    ])
+  ]);
+
+  const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
+  const rent = totalRentCollected[0]?.total || 0;
+  const maintenance = totalMaintenanceCost[0]?.total || 0;
+  const netIncome = rent - maintenance;
+
+  return {
+    occupancyRate: `${occupancyRate.toFixed(2)}%`,
+    totalRent: rent,
+    totalMaintenance: maintenance,
+    netIncome: netIncome,
+    totalUnits,
+    occupiedUnits,
+    maintenanceHeatmap: maintenanceHeatmap
+  };
+}
+
 module.exports = {
   banUser,
   approveUser,
   getDashboardStats,
+  deleteOwnerAndAllRelatedData,
+  getAdvancedAnalytics,
 };

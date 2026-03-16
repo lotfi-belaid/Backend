@@ -70,3 +70,23 @@ module.exports.requestLeaseTermination = async (req, res) => {
     res.status(error.status || 500).json({ message: error.message || "Server Error", error });
   }
 };
+
+// get Tenant Leases
+module.exports.getTenantLeases = async (req, res) => {
+  try {
+    const leases = await leaseService.getTenantLeases(req.user.id);
+    res.json({ data: leases });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching leases", error });
+  }
+};
+
+// get Owner Leases
+module.exports.getOwnerLeases = async (req, res) => {
+  try {
+    const leases = await leaseService.getOwnerLeases(req.user.id);
+    res.json({ data: leases });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching leases", error });
+  }
+};

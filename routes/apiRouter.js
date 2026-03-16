@@ -6,6 +6,7 @@ const adminRouter = require("./adminRouter");
 const propertyRouter = require("./propertyRouter");
 const unitRouter = require("./unitRouter");
 const leaseRouter = require("./leaseRouter");
+const messageRouter = require("./messageRouter");
 const maintenanceRouter = require("./maintenanceRouter");
 const invoiceRouter = require("./invoiceRouter");
 const userCrudRouter = require("./userCrudRouter");
@@ -24,6 +25,7 @@ router.use("/", userCrudRouter);
 router.use("/properties", propertyRouter);
 router.use("/units", unitRouter);
 router.use("/leases", leaseRouter);
+router.use("/messages", messageRouter);
 router.use("/maintenance", maintenanceRouter);
 router.use("/invoices", invoiceRouter);
 

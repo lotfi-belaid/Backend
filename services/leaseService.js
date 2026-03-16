@@ -1,6 +1,7 @@
 const Lease = require("../models/leaseSchema");
 const Unit = require("../models/unitSchema");
 const User = require("../models/userSchema");
+const notificationService = require("./notificationService");
 
 async function approveApplication(ownerId, data) {
   const { tenantId, unitId, leaseStartDate, leaseEndDate, rentAmount } = data;
@@ -55,6 +56,14 @@ async function approveApplication(ownerId, data) {
   await lease.save();
   unit.status = "OCCUPIED";
   await unit.save();
+
+  // Notify tenant
+  await notificationService.sendNotification(
+    tenantId,
+    "Lease Approved!",
+    `Congratulations! Your application for unit ${unit.unitNumber} has been approved.`,
+    "LEASE"
+  );
 
   return { lease, tenantName: tenant.name };
 }
@@ -154,7 +163,24 @@ async function requestTermination(tenantId, data) {
     requestedAt: new Date(),
   };
   await lease.save();
+  
+  // Notify owner
+  await notificationService.sendNotification(
+    lease.ownerId,
+    "Termination Requested",
+    `A tenant has requested to terminate their lease for unit ${lease.unitId}.`,
+    "LEASE"
+  );
+
   return lease;
+}
+
+async function getTenantLeases(tenantId) {
+  return await Lease.find({ tenantId }).populate("unitId").populate("ownerId");
+}
+
+async function getOwnerLeases(ownerId) {
+  return await Lease.find({ ownerId }).populate("unitId").populate("tenantId");
 }
 
 module.exports = {
@@ -162,4 +188,6 @@ module.exports = {
   reviewTermination,
   signLease,
   requestTermination,
+  getTenantLeases,
+  getOwnerLeases,
 };

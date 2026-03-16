@@ -1,5 +1,6 @@
 const Maintenance = require("../models/maintenanceSchema");
 const User = require("../models/userSchema");
+const notificationService = require("./notificationService");
 
 async function assignVendor(ownerId, data) {
   const { vendorId, maintenanceId } = data;
@@ -30,6 +31,15 @@ async function assignVendor(ownerId, data) {
 
   maintenance.vendorId = vendorId;
   await maintenance.save();
+
+  // Notify vendor
+  await notificationService.sendNotification(
+    vendorId,
+    "New Job Assigned",
+    `You have been assigned a new maintenance job for task: ${maintenance.description}`,
+    "MAINTENANCE"
+  );
+
   return { vendorName: vendor.name, maintenance };
 }
 
@@ -106,11 +116,43 @@ async function addRepairReport(vendorId, data) {
   };
   maintenance.status = 'DONE';
   await maintenance.save();
+
+  // Notify tenant/owner (assuming we can get requestedBy from maintenance)
+  await notificationService.sendNotification(
+    maintenance.requestedBy,
+    "Repair Complete",
+    `The repair for "${maintenance.description}" has been completed by the vendor.`,
+    "MAINTENANCE"
+  );
+
   return maintenance;
+}
+
+async function getTenantMaintenanceRequests(tenantId) {
+  return await Maintenance.find({ requestedBy: tenantId }).sort({ createdAt: -1 });
+}
+
+async function getOwnerMaintenanceOverview(ownerId) {
+  // Finding properties owned by the owner, then units in those properties
+  const Property = require("../models/propertySchema");
+  const Unit = require("../models/unitSchema");
+  const properties = await Property.find({ ownerId }).select("_id");
+  const propIds = properties.map(p => p._id);
+  const units = await Unit.find({ propertyId: { $in: propIds } }).select("_id");
+  const unitIds = units.map(u => u._id);
+  
+  return await Maintenance.find({ unitId: { $in: unitIds } }).populate("unitId").sort({ createdAt: -1 });
+}
+
+async function getVendorAssignedJobs(vendorId) {
+  return await Maintenance.find({ vendorId }).sort({ createdAt: -1 });
 }
 
 module.exports = {
   assignVendor,
   acceptJob,
   addRepairReport,
+  getTenantMaintenanceRequests,
+  getOwnerMaintenanceOverview,
+  getVendorAssignedJobs,
 };

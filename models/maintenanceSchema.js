@@ -11,7 +11,11 @@ const maintenanceSchema = new mongoose.Schema({
     report: {
         description: { type: String },
         cost: { type: Number },
-        submittedAt: { type: Date }
+        submittedAt: { type: Date },
+        photos: {
+            before: [{ type: String }],
+            after: [{ type: String }]
+        }
     }
 });
 

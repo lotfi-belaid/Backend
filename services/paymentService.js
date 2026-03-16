@@ -3,6 +3,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const Invoice = require("../models/invoiceSchema");
 const Lease = require("../models/leaseSchema");
 const User = require("../models/userSchema");
+const notificationService = require("./notificationService");
 
 async function createPaymentIntent(userId, invoiceId) {
   const invoice = await Invoice.findById(invoiceId);
@@ -62,10 +63,22 @@ async function handleStripeWebhook(rawBody, signature) {
       status: "PAID",
       paidAt: new Date(),
       paymentMethod: "STRIPE",
-    });
+    }, { new: true }); // Return the updated document
 
     if (!invoice) {
       console.error(`Invoice ${invoiceId} not found during webhook update`);
+    } else {
+      const lease = await Lease.findById(invoice.leaseId);
+      if (lease) {
+        await notificationService.sendNotification(
+          lease.ownerId,
+          "Invoice Paid (Stripe)",
+          `Tenant has paid the invoice for unit ${lease.unitId} via Stripe.`,
+          "PAYMENT"
+        );
+      } else {
+        console.error(`Lease ${invoice.leaseId} not found for invoice ${invoiceId} during webhook notification.`);
+      }
     }
   }
 
@@ -129,7 +142,26 @@ async function payInvoiceManually(tenantId, invoiceId) {
   invoice.status = "PAID";
   invoice.paidAt = new Date();
   await invoice.save();
+
+  const lease = await Lease.findById(invoice.leaseId);
+  if (lease) {
+    await notificationService.sendNotification(
+      lease.ownerId,
+      "Invoice Paid",
+      `Tenant has paid the invoice for unit ${lease.unitId}.`,
+      "PAYMENT"
+    );
+  } else {
+    console.error(`Lease ${invoice.leaseId} not found for invoice ${invoiceId} during manual payment notification.`);
+  }
+
   return { tenantName: tenant.name, invoice };
+}
+
+async function getTenantInvoices(tenantId) {
+  const tenantLeases = await Lease.find({ tenantId }).select("_id");
+  const leaseIds = tenantLeases.map((l) => l._id);
+  return await Invoice.find({ leaseId: { $in: leaseIds } }).sort({ dueDate: -1 });
 }
 
 module.exports = {
@@ -137,4 +169,5 @@ module.exports = {
   handleStripeWebhook,
   getOwnerPayments,
   payInvoiceManually,
+  getTenantInvoices,
 };

@@ -5,6 +5,8 @@ const auth = require("../middlewares/authMiddleware");
 
 // Base path: /leases
 router.post("/approve", auth, leaseController.approveApplication);
+router.get("/tenant", auth, leaseController.getTenantLeases);
+router.get("/owner", auth, leaseController.getOwnerLeases);
 router.post("/:id/sign", auth, leaseController.signLease);
 router.post("/:id/terminate-request", auth, leaseController.requestLeaseTermination);
 router.post("/:id/terminate-review", auth, leaseController.reviewLeaseTermination);
