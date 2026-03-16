@@ -3,6 +3,7 @@ const Property = require("../models/propertySchema");
 const Lease = require("../models/leaseSchema");
 const Maintenance = require("../models/maintenanceSchema");
 const Invoice = require("../models/invoiceSchema");
+const mongoose = require("mongoose");
 
 async function banUser(userId) {
   const user = await User.findById(userId);
@@ -29,6 +30,44 @@ async function approveUser(userId) {
   }
   return user;
 }
+async function deleteOwnerAndAllRelatedData(ownerId) {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const owner = await User.findById(ownerId).session(session);
+    if (!owner || owner.role != "OWNER") {
+      const error = new Error("Invalid Owner ID");
+      error.status = 400;
+      throw error;
+    }
+    const properties = await Property.find({ ownerId }).session(session);
+    const propertyIds = properties.map(p => p._id);
+
+    const units = await Unit.find({ propertyId: { $in: propertyIds } }).session(session);
+    const unitIds = units.map(u => u._id);
+
+    const leases = await Lease.find({ unitId: { $in: unitIds } }).session(session);
+    const leaseIds = leases.map(l => l._id);
+
+    await Invoice.deleteMany({ leaseId: { $in: leaseIds } }).session(session);
+    await Maintenance.deleteMany({ unitId: { $in: unitIds } }).session(session);
+    await Lease.deleteMany({ unitId: { $in: unitIds } }).session(session);
+    await Unit.deleteMany({ propertyId: { $in: propertyIds } }).session(session);
+    await Property.deleteMany({ ownerId }).session(session);
+    await User.findByIdAndDelete(ownerId).session(session);
+    await session.commitTransaction();
+  }
+  catch (error) {
+    await session.abortTransaction();
+    throw error;
+
+  }
+  finally {
+    session.endSession();
+  }
+
+};
 
 async function getDashboardStats() {
   const [
